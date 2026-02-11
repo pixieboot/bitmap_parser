@@ -6,6 +6,7 @@
 *.ko
 *.obj
 *.elf
+*.slo
 
 # Linker output
 *.ilk
@@ -21,6 +22,12 @@
 *.a
 *.la
 *.lo
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -44,6 +51,7 @@
 
 # Kernel Module Compile Results
 *.mod*
+*.smod
 *.cmd
 .tmp_versions/
 modules.order
@@ -53,3 +61,6 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# dir
+images/
