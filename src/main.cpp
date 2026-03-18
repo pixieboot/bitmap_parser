@@ -12,7 +12,7 @@ typedef unsigned int uint32;
 
 struct config {
     std::string arg1{};
-    std::string arg2{"--no-rgb"};
+    std::string arg2{};
 };
 
 namespace BMP {
@@ -124,34 +124,34 @@ void displayColorTable(uint32 color, int counter) {
     switch (counter) {
     case 0:
         if (len == 1) {
-            std::cout << "R: " << color << "  ";
+            std::cout << " R: " << color << "   ";
         } else if (len == 2) {
-            std::cout << "R: " << color << ' ';
+            std::cout << " R: " << color << "  ";
         } else {
-            std::cout << "R: " << color;
+            std::cout << " R: " << color << ' ';
         }
         break;
     case 1:
         if (len == 1) {
-            std::cout << "G: " << color << "  ";
+            std::cout << " G: " << color << "   ";
         } else if (len == 2) {
-            std::cout << "G: " << color << ' ';
+            std::cout << " G: " << color << "  ";
         } else {
-            std::cout << "G: " << color;
+            std::cout << " G: " << color << ' ';
         }
         break;
     case 2:
         if (len == 1) {
-            std::cout << "B: " << color << "  ";
+            std::cout << " B: " << color << "   |";
         } else if (len == 2) {
-            std::cout << "B: " << color << ' ';
+            std::cout << " B: " << color << "  |";
         } else {
-            std::cout << "B: " << color;
+            std::cout << " B: " << color << " |";
         }
         break;
     default:;
     }
-    std::cout << " | ";
+    std::cout << "|";
 }
 
 /**
@@ -178,12 +178,12 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
     for (int i = 0; i < 2; i++) {
         std::cout << header.signature[i];
     }
-    std::cout << "\n> File size: " << header.file_size << '\n';
+    std::cout << "\n> File size: " << header.file_size << "b\n";
     std::cout << "> Reserved: " << header.reserved << '\n';
     std::cout << "> Data offset: " << header.data_offset << '\n';
 
     std::cout << "\nInfo Header:\n";
-    std::cout << "> Info Header size: " << info_header.size << '\n';
+    std::cout << "> Info Header size: " << info_header.size << "b\n";
     std::cout << "> Width: " << info_header.width << '\n';
     std::cout << "> Height: " << info_header.height << '\n';
     std::cout << "> Planes: " << info_header.planes << '\n';
@@ -258,7 +258,7 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
             std::cout << "Color Table:\n";
             std::cout << "> Total entries count: " << entries_count << '\n';
             std::cout << "> RGB values (3x" << entries_count / 3
-                      << " table):\n";
+                      << " table):\n\n";
             while (b.pos < static_cast<int>(header.data_offset)) {
                 uint32 color = buf_get8(b);
                 if (counter < 3) {
@@ -274,7 +274,10 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
                 }
             }
         } else {
-            std::cout << "Color table not found\n";
+            std::cout << "Color table not found!\n";
+            std::cout << "Color tables and it's RGB values are only present if "
+                         "Bits per pixels are "
+                         "less or equal to 8\n";
         }
     }
 }
@@ -366,7 +369,7 @@ void showManual() {
  * @param: char *path; pointer to the path of the file
  * @return: void
  */
-void loadFile(std::string &path, std::string &rgb) {
+void loadFile(std::string &path, const std::string &rgb) {
     if (path == "help" || path == "--h") {
         showManual();
     } else {
