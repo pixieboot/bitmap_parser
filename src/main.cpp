@@ -10,6 +10,11 @@ typedef unsigned char uint8;
 typedef unsigned short uint16;
 typedef unsigned int uint32;
 
+struct config {
+    std::string arg1{};
+    std::string arg2{"--no-rgb"};
+};
+
 namespace BMP {
 struct Header {
     std::array<char, 2> signature{};
@@ -43,6 +48,14 @@ struct Buf {
     int size{};
 };
 
+/**
+ * Creates a new custom buffer
+ *
+ * @param: void *p; pointer to the begging of the memory block to be stored to
+ * the new buffer
+ * @param: std::size_t size; size of the new buffer
+ * @return: Buf struct;
+ */
 Buf new_buf(void *p, std::size_t size) {
     Buf r;
     assert(size < 0x40000000);
@@ -52,6 +65,12 @@ Buf new_buf(void *p, std::size_t size) {
     return r;
 }
 
+/**
+ * Parsing single bytes from the buffer
+ *
+ * @param: Buf &b; custom buffer struct
+ * @return: uint8; parsed byte that has been converted to unsigned char
+ */
 uint8 buf_get8(Buf &b) {
     uint8 v = 0;
     assert(b.pos < b.size);
@@ -60,6 +79,12 @@ uint8 buf_get8(Buf &b) {
     return v;
 }
 
+/**
+ * Parsing single bytes from the buffer
+ *
+ * @param: Buf &b; custom buffer struct
+ * @return: uint16; parsed 2-byte that has been converted to unsigned short
+ */
 uint16 buf_get16(Buf &b) {
     uint16 v = 0;
     assert(b.pos + 1 < b.size);
@@ -69,6 +94,12 @@ uint16 buf_get16(Buf &b) {
     return v;
 }
 
+/**
+ * Parsing single bytes from the buffer
+ *
+ * @param: Buf &b; custom buffer struct
+ * @return: uint32; parsed 4-byte that has been converted to unsigned int
+ */
 uint32 buf_get32(Buf &b) {
     uint32 v = 0;
     assert(b.pos + 3 < b.size);
@@ -80,6 +111,13 @@ uint32 buf_get32(Buf &b) {
     return v;
 }
 
+/**
+ * Displays a matrix table 3x(something) with all RGB values of table entries
+ *
+ * @param: uint32 color; which color is being parsed (current byte being parsed)
+ * @param: int counter; counter for color seperation (0: R, 1: G, 2: B)
+ * @return: void;
+ */
 void displayColorTable(uint32 color, int counter) {
     int len = std::to_string(color).length();
 
@@ -116,8 +154,22 @@ void displayColorTable(uint32 color, int counter) {
     std::cout << " | ";
 }
 
+/**
+ * Writes out all the data that has been parsed from the .bmp image out to the
+ * term
+ *
+ * @param: BMP::Header &header; header info struct
+ * @param: BMP::InfoHeader &info_header; info header struct with details about
+ * the .bmp image
+ * @param: const std::unique_ptr<char> &color_table: pointer to the first byte
+ * of the color table entries
+ * @param: Buf &b; custom buffer struct
+ * @param: const std::string &rgb; --rgb arg
+ * @return: void;
+ */
 void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
-                  const std::unique_ptr<char> &color_table, Buf &b) {
+                  const std::unique_ptr<char> &color_table, Buf &b,
+                  const std::string &rgb) {
     std::cout << "\nFile details\n";
     std::cout << "------------\n";
 
@@ -197,32 +249,43 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
     std::cout << "> Important colors: " << info_header.important_colors
               << "\n\n";
 
-    if (color_table != nullptr) {
-        int counter{0};
-        int splitter{0};
-        int entries_count{(static_cast<int>(header.data_offset) - b.pos) / 4};
-        std::cout << "Color Table:\n";
-        std::cout << "> Total entries count: " << entries_count << '\n';
-        std::cout << "> RGB values (3x" << entries_count / 3 << " table):\n";
-        while (b.pos < static_cast<int>(header.data_offset)) {
-            uint32 color = buf_get8(b);
-            if (counter < 3) {
-                displayColorTable(color, counter);
-                counter++;
-                splitter++;
-            } else {
-                counter = 0;
+    if (rgb == "--rgb") {
+        if (color_table != nullptr) {
+            int counter{0};
+            int splitter{0};
+            int entries_count{(static_cast<int>(header.data_offset) - b.pos) /
+                              4};
+            std::cout << "Color Table:\n";
+            std::cout << "> Total entries count: " << entries_count << '\n';
+            std::cout << "> RGB values (3x" << entries_count / 3
+                      << " table):\n";
+            while (b.pos < static_cast<int>(header.data_offset)) {
+                uint32 color = buf_get8(b);
+                if (counter < 3) {
+                    displayColorTable(color, counter);
+                    counter++;
+                    splitter++;
+                } else {
+                    counter = 0;
+                }
+                if (splitter >= 9) {
+                    std::cout << '\n';
+                    splitter = 0;
+                }
             }
-            if (splitter >= 9) {
-                std::cout << '\n';
-                splitter = 0;
-            }
+        } else {
+            std::cout << "Color table not found\n";
         }
-    } else {
-        std::cout << "Color table not found\n";
     }
 }
 
+/**
+ * Func for parsing header bytes
+ *
+ * @param: BMP::Header &header; header struct with some main details
+ * @param: Buf &b; custom buffer struct
+ * @return: void;
+ */
 void parseHeaderData(BMP::Header &header, Buf &b) {
     header.signature[0] = buf_get8(b);
     header.signature[1] = buf_get8(b);
@@ -231,6 +294,14 @@ void parseHeaderData(BMP::Header &header, Buf &b) {
     header.data_offset = buf_get32(b);
 }
 
+/**
+ * Func for parsing info_header bytes
+ *
+ * @param: BMP::InfoHeader &info_header; info header struct with details about
+ * the .bmp image
+ * @param: Buf &b; custom buffer struct
+ * @return: void;
+ */
 void parseInfoHeaderData(BMP::InfoHeader &info_header, Buf &b) {
     info_header.size = buf_get32(b);
     info_header.width = buf_get32(b);
@@ -245,7 +316,14 @@ void parseInfoHeaderData(BMP::InfoHeader &info_header, Buf &b) {
     info_header.important_colors = buf_get32(b);
 }
 
-void parseFileData(Buf &b) {
+/**
+ * Core func for file parsing and seperating how data will be allocated
+ *
+ * @param: Buf &b; custom buffer struct
+ * @param: const std::string &rgb; --rgb arg
+ * @return: void;
+ */
+void parseFileData(Buf &b, const std::string &rgb) {
     BMP::Header header{};
     BMP::InfoHeader info_header{};
 
@@ -265,8 +343,21 @@ void parseFileData(Buf &b) {
     // b.pos = header.data_offset;
     // raster_data = std::unique_ptr<char>(new char[info_header.image_size]);
     // parseRasterData(raster_data, b);
+    showFileInfo(header, info_header, color_table, b, rgb);
+}
 
-    showFileInfo(header, info_header, color_table, b);
+/**
+ * Shows the manual with details
+ *
+ * @param: none;
+ * @return: void;
+ */
+void showManual() {
+    std::cout << "\nArgs:\tDescritpion:\n\n";
+    std::cout << "path\tPath to the image to be parsed (e.g. "
+                 "../images/example.bmp)\n";
+    std::cout << "--rgb\tDisplays a color table of RGB values\n";
+    std::cout << "--h\tShows help for argument inputs\n";
 }
 
 /**
@@ -275,35 +366,69 @@ void parseFileData(Buf &b) {
  * @param: char *path; pointer to the path of the file
  * @return: void
  */
-void loadFile(char *path) {
-    std::ifstream file(path, std::ios::binary | std::ios::ate);
-
-    if (file.is_open()) {
-        std::cout << "> File opened\n";
-
-        std::streampos size;
-        std::cout << "> Memblock created\n";
-
-        size = file.tellg();
-        std::unique_ptr<char> memblock{new char[size]};
-        file.seekg(0, std::ios::beg);
-        file.read(memblock.get(), size);
-        std::cout << "> File read\n";
-
-        Buf b{new_buf(memblock.get(), size)};
-        std::cout << "> New buffer created\n";
-
-        file.close();
-        std::cout << "> File closed\n";
-
-        parseFileData(b);
+void loadFile(std::string &path, std::string &rgb) {
+    if (path == "help" || path == "--h") {
+        showManual();
     } else {
-        std::cerr << "Error: " << strerror(errno) << '\n';
+        std::ifstream file(path, std::ios::binary | std::ios::ate);
+
+        if (file.is_open()) {
+            std::cout << "> File opened\n";
+
+            std::streampos size;
+            std::cout << "> Memblock created\n";
+
+            size = file.tellg();
+            std::unique_ptr<char> memblock{new char[size]};
+            file.seekg(0, std::ios::beg);
+            file.read(memblock.get(), size);
+            std::cout << "> File read\n";
+
+            Buf b{new_buf(memblock.get(), size)};
+            std::cout << "> New buffer created\n";
+
+            file.close();
+            std::cout << "> File closed\n";
+
+            parseFileData(b, rgb);
+        } else {
+            std::cerr << "Error: " << strerror(errno) << '\n';
+        }
     }
 };
 
+/**
+ * Parses given args from the term
+ *
+ * @param: char **argv; array of args from the terminal
+ * @return: struct config; data struct for args in std::string format (cfg.arg1,
+ * cfg.arg2...)
+ */
+config parse_command_params(char **argv) {
+    config cfg{};
+
+    if (!argv[1]) {
+        throw std::runtime_error("Path to the image is required as the 1st "
+                                 "arg\nType help or --h for manual");
+    }
+    cfg.arg1 = argv[1];
+
+    if (!argv[2]) {
+        return cfg;
+    }
+    cfg.arg2 = argv[2];
+
+    return cfg;
+}
+
 int main([[maybe_unused]] int argc, char *argv[]) {
-    loadFile(argv[1]);
+    try {
+        config cfg{parse_command_params(argv)};
+        loadFile(cfg.arg1, cfg.arg2);
+    } catch (std::exception const &e) {
+        std::cerr << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
 
     return 0;
 }
