@@ -33,8 +33,24 @@ struct InfoHeader {
     uint32 image_size{};
     uint32 x_pixels_per_m{};
     uint32 y_pixels_per_m{};
-    uint32 colors_used{};
+    uint32 colors_in_color_table{};
     uint32 important_colors{};
+};
+
+struct InfoHeaderV5Extras {
+    uint32 r_channel_bitmask{};
+    uint32 g_channel_bitmask{};
+    uint32 b_channel_bitmask{};
+    uint32 a_channel_bitmask{};
+    uint32 color_space_type{};
+    uint32 color_space_endpoints{};
+    uint32 gamma_r_endpoints{};
+    uint32 gamma_g_endpoints{};
+    uint32 gamma_b_endpoints{};
+    uint32 intent{};
+    uint32 icc_profile_data{};
+    uint32 icc_profile_size{};
+    uint32 reserved{};
 };
 
 struct PixelData {
@@ -168,6 +184,7 @@ void displayColorTable(uint32 color, int counter) {
  * @return: void;
  */
 void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
+                  const BMP::InfoHeaderV5Extras &info_header_v5,
                   const std::unique_ptr<char> &color_table, Buf &b,
                   const std::string &rgb) {
     std::cout << "\nFile details\n";
@@ -183,7 +200,7 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
     std::cout << "> Data offset: " << header.data_offset << '\n';
 
     std::cout << "\nInfo Header:\n";
-    std::cout << "> Info Header size: " << info_header.size << "b\n";
+    std::cout << "> Size: " << info_header.size << "b\n";
     std::cout << "> Width: " << info_header.width << '\n';
     std::cout << "> Height: " << info_header.height << '\n';
     std::cout << "> Planes: " << info_header.planes << '\n';
@@ -206,6 +223,10 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
     case 24:
         std::cout << "24bit RGB\n";
         break;
+    case 32:
+        std::cout << "32 kurceva\n";
+    default:
+        std::cout << '\n';
     }
     std::cout << "--> Max num colors: ";
     switch (info_header.bit_count) {
@@ -224,7 +245,8 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
     case 24:
         std::cout << "16M\n";
         break;
-    default:;
+    default:
+        std::cout << '\n';
     }
 
     std::cout << "> Compression: " << info_header.compression << '\n';
@@ -245,9 +267,37 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
     std::cout << "> Image size: " << info_header.image_size << '\n';
     std::cout << "> X px per M: " << info_header.x_pixels_per_m << '\n';
     std::cout << "> Y px per M: " << info_header.y_pixels_per_m << '\n';
-    std::cout << "> Colors used: " << info_header.colors_used << '\n';
+    std::cout << "> Colors used: " << info_header.colors_in_color_table << '\n';
     std::cout << "> Important colors: " << info_header.important_colors
               << "\n\n";
+
+    if (info_header.size == 124) {
+        std::cout << "Info Header V5 Extras:\n";
+        std::cout << "> Red ch bitmask: " << info_header_v5.r_channel_bitmask
+                  << '\n';
+        std::cout << "> Green ch bitmask: " << info_header_v5.g_channel_bitmask
+                  << '\n';
+        std::cout << "> Blue ch bitmask: " << info_header_v5.b_channel_bitmask
+                  << '\n';
+        std::cout << "> Alpha ch bitmask: " << info_header_v5.a_channel_bitmask
+                  << '\n';
+        std::cout << "> Color space type: " << info_header_v5.color_space_type
+                  << '\n';
+        std::cout << "> Color space endpoints: "
+                  << info_header_v5.color_space_endpoints << '\n';
+        std::cout << "> Gamma red endpoints: "
+                  << info_header_v5.gamma_r_endpoints << '\n';
+        std::cout << "> Gamma green endpoints: "
+                  << info_header_v5.gamma_g_endpoints << '\n';
+        std::cout << "> Gamma blue endpoints: "
+                  << info_header_v5.gamma_b_endpoints << '\n';
+        std::cout << "> Intent: " << info_header_v5.intent << '\n';
+        std::cout << "> ICC profile data: " << info_header_v5.icc_profile_data
+                  << '\n';
+        std::cout << "> ICC profile size: " << info_header_v5.icc_profile_size
+                  << '\n';
+        std::cout << "> Reserved: " << info_header_v5.reserved << "\n\n";
+    }
 
     if (rgb == "--rgb") {
         if (color_table != nullptr) {
@@ -315,8 +365,32 @@ void parseInfoHeaderData(BMP::InfoHeader &info_header, Buf &b) {
     info_header.image_size = buf_get32(b);
     info_header.x_pixels_per_m = buf_get32(b);
     info_header.y_pixels_per_m = buf_get32(b);
-    info_header.colors_used = buf_get32(b);
+    info_header.colors_in_color_table = buf_get32(b);
     info_header.important_colors = buf_get32(b);
+}
+
+/**
+ * Func for parsing info_header_v5 bytes
+ *
+ * @param: BMP::InfoHeaderV5Extras &info_header_v5; info header version 5 struct
+ * with details about the .bmp image
+ * @param: Buf &b; custom buffer struct
+ * @return: void;
+ */
+void parseInfoHeaderV5Data(BMP::InfoHeaderV5Extras &info_header_v5, Buf &b) {
+    info_header_v5.r_channel_bitmask = buf_get32(b);
+    info_header_v5.g_channel_bitmask = buf_get32(b);
+    info_header_v5.b_channel_bitmask = buf_get32(b);
+    info_header_v5.a_channel_bitmask = buf_get16(b);
+    info_header_v5.color_space_type = buf_get16(b);
+    info_header_v5.color_space_endpoints = buf_get32(b);
+    info_header_v5.gamma_r_endpoints = buf_get32(b);
+    info_header_v5.gamma_g_endpoints = buf_get32(b);
+    info_header_v5.gamma_b_endpoints = buf_get32(b);
+    info_header_v5.intent = buf_get32(b);
+    info_header_v5.icc_profile_data = buf_get32(b);
+    info_header_v5.icc_profile_size = buf_get32(b);
+    info_header_v5.reserved = buf_get32(b);
 }
 
 /**
@@ -329,9 +403,14 @@ void parseInfoHeaderData(BMP::InfoHeader &info_header, Buf &b) {
 void parseFileData(Buf &b, const std::string &rgb) {
     BMP::Header header{};
     BMP::InfoHeader info_header{};
+    BMP::InfoHeaderV5Extras info_header_v5{};
 
     parseHeaderData(header, b);
     parseInfoHeaderData(info_header, b);
+
+    if (info_header.size == 124) {
+        parseInfoHeaderV5Data(info_header_v5, b);
+    }
 
     std::unique_ptr<char> color_table;
     // std::unique_ptr<char> raster_data;
@@ -346,7 +425,7 @@ void parseFileData(Buf &b, const std::string &rgb) {
     // b.pos = header.data_offset;
     // raster_data = std::unique_ptr<char>(new char[info_header.image_size]);
     // parseRasterData(raster_data, b);
-    showFileInfo(header, info_header, color_table, b, rgb);
+    showFileInfo(header, info_header, info_header_v5, color_table, b, rgb);
 }
 
 /**
