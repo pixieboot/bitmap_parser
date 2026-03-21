@@ -25,14 +25,14 @@ struct Header {
 
 struct InfoHeader {
     uint32 size{};
-    uint32 width{};
-    uint32 height{};
+    int width{};
+    int height{};
     uint16 planes{};
     uint16 bit_count{};
     uint32 compression{};
     uint32 image_size{};
-    uint32 x_pixels_per_m{};
-    uint32 y_pixels_per_m{};
+    int x_pixels_per_m{};
+    int y_pixels_per_m{};
     uint32 colors_in_color_table{};
     uint32 important_colors{};
 };
@@ -218,13 +218,13 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
         std::cout << "8bit palletized\n";
         break;
     case 16:
-        std::cout << "16bit RGB\n";
+        std::cout << "16bit RGB high-color\n";
         break;
     case 24:
-        std::cout << "24bit RGB\n";
+        std::cout << "24bit RGB true-color\n";
         break;
     case 32:
-        std::cout << "32 kurceva\n";
+        std::cout << "32bit RGB deep-color\n";
     default:
         std::cout << '\n';
     }
@@ -243,7 +243,10 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
         std::cout << "65536\n";
         break;
     case 24:
-        std::cout << "16M\n";
+        std::cout << "16M+\n";
+        break;
+    case 32:
+        std::cout << "1B+\n";
         break;
     default:
         std::cout << '\n';
@@ -261,7 +264,29 @@ void showFileInfo(const BMP::Header &header, const BMP::InfoHeader &info_header,
     case 2:
         std::cout << "BI_RLE4 (4bit RLE encoding)\n";
         break;
-    default:;
+    case 3:
+        std::cout << "BI_BITFIELDS (Huffman 1D encoding)\n";
+        break;
+    case 4:
+        std::cout << "BI_JPEG (24bit RLE encoding)\n";
+        break;
+    case 5:
+        std::cout << "BI_PNG (24bit RLE encoding)\n";
+        break;
+    case 6:
+        std::cout << "BI_ALPHABITFIELDS (RGBA bit field masks)\n";
+        break;
+    case 11:
+        std::cout << "BI_CMYK\n";
+        break;
+    case 12:
+        std::cout << "BI_CMYK8 (8bit RLE encoding)\n";
+        break;
+    case 13:
+        std::cout << "BI_CMYK4 (4bit RLE encoding)\n";
+        break;
+    default:
+        std::cout << '\n';
     }
 
     std::cout << "> Image size: " << info_header.image_size << '\n';
@@ -381,8 +406,8 @@ void parseInfoHeaderV5Data(BMP::InfoHeaderV5Extras &info_header_v5, Buf &b) {
     info_header_v5.r_channel_bitmask = buf_get32(b);
     info_header_v5.g_channel_bitmask = buf_get32(b);
     info_header_v5.b_channel_bitmask = buf_get32(b);
-    info_header_v5.a_channel_bitmask = buf_get16(b);
-    info_header_v5.color_space_type = buf_get16(b);
+    info_header_v5.a_channel_bitmask = buf_get32(b);
+    info_header_v5.color_space_type = buf_get32(b);
     info_header_v5.color_space_endpoints = buf_get32(b);
     info_header_v5.gamma_r_endpoints = buf_get32(b);
     info_header_v5.gamma_g_endpoints = buf_get32(b);
