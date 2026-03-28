@@ -1,23 +1,17 @@
+#include "term_config.hpp"
 #include "BMP.hpp"
 
-int main([[maybe_unused]] int argc, char *argv[]) {
-    try {
-        config cfg{};
-        BMP::parse_command_params(argv, cfg);
-        if (cfg.arg1 == "help" || cfg.arg1 == "-h") {
-            BMP::showManual();
-            return 0;
-        }
+int main(int argc, char *argv[]) {
+  try {
+    TermArgsConfig term{};
+    term.parseTermArgs(argc, argv, term);
 
-        Buf b{};
-        BMP::loadFileToBuf(b, cfg.arg1);
+    BMP bmp{};
+    bmp.parseInput(term);
+  } catch (std::exception const &e) {
+    std::cerr << e.what() << '\n';
+    return EXIT_FAILURE;
+  }
 
-        BMP bmp{};
-        bmp.parseBmpData(b, cfg.arg2);
-    } catch (std::exception const &e) {
-        std::cerr << e.what() << '\n';
-        return EXIT_FAILURE;
-    }
-
-    return 0;
+  return 0;
 }
